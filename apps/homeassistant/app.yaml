@@ -1,0 +1,59 @@
+id: homeassistant
+title: Home Assistant
+description: Home automation hub. (Bridge networking — some discovery integrations may need extra setup.)
+category: Utilities
+icon: '🏠'
+spec:
+  source:
+    type: image
+    image: lscr.io/linuxserver/homeassistant:latest
+  env:
+    PGID: "1000"
+    PUID: "1000"
+    TZ: Etc/UTC
+  volumes:
+    - name: config
+      mount: /config
+      owner: 1000:1000
+  routes:
+    - port: 8123
+  backup:
+    enabled: true
+  notes: To let apps such as HUD use Home Assistant, create a long-lived access token (your profile → Security) and add it as the HASS_TOKEN secret in Config → Secrets.
+  connection:
+    port: 8123
+    secret: HASS_TOKEN
+options:
+  - key: tz
+    label: Timezone
+    target: env:TZ
+    required: false
+    default: Etc/UTC
+projectUrl: https://github.com/home-assistant/core
+about: |-
+  Home Assistant is the home-automation hub: lights, thermostats, locks, cameras, sensors, and media, from thousands of brands, brought under one roof and one interface, with automations that run locally.
+
+  Fog runs it on the container network, so integrations that discover devices by broadcast may need to be added by address instead.
+highlights:
+  - Thousands of integrations, most working locally
+  - Automations, scenes, and scripts with a visual editor
+  - Dashboards for phones, tablets, and wall panels
+  - Energy monitoring
+  - Voice assistants that stay in the house
+screenshots:
+  - src: shot-1.webp
+    alt: The overview dashboard
+  - src: shot-2.webp
+    alt: Integrations
+logo: logo.svg
+developer: Open Home Foundation
+license: Apache-2.0
+website: https://www.home-assistant.io
+docs: https://www.home-assistant.io/docs/
+footprint:
+  memory: 524288000
+  memoryPeak: 1258291200
+  cpu: moderate
+  cpuWhen: running automations
+  disk: 2097152000
+  diskGrows: with history it records

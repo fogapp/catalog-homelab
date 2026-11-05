@@ -1,0 +1,74 @@
+id: gitea
+title: Gitea
+description: Git hosting with pull requests, issues, and a package registry.
+category: Development
+icon: '🍵'
+spec:
+  source:
+    type: image
+    image: gitea/gitea:1
+  env:
+    GITEA__database__DB_TYPE: sqlite3
+    GITEA__security__INSTALL_LOCK: "true"
+    GITEA__server__DOMAIN: '{{fqdn}}'
+    GITEA__server__LFS_START_SERVER: "true"
+    GITEA__server__ROOT_URL: https://{{fqdn}}/
+    GITEA__server__SSH_DOMAIN: '{{fqdn}}'
+    GITEA__server__SSH_PORT: "2222"
+    TZ: Etc/UTC
+    USER_GID: "1000"
+    USER_UID: "1000"
+  volumes:
+    - name: data
+      mount: /data
+      owner: 1000:1000
+  routes:
+    - port: 3000
+      noBuffer: true
+  ports:
+    - port: 22
+      hostPort: 2222
+  health:
+    path: /api/healthz
+  deployStrategy: restart
+  backup:
+    enabled: true
+  notes: The first account to register becomes the administrator, so register yours right away, then close registration if this server is reachable beyond the household (Site Administration → Configuration, or set `GITEA__service__DISABLE_REGISTRATION` to `true` in the app's env). Clone over HTTPS at this app's URL, or over SSH on port **2222** — add your public key under Settings → SSH / GPG Keys. Repositories, the database, and the config all live in the data volume, so snapshots capture the whole instance.
+options:
+  - key: tz
+    label: Timezone
+    target: env:TZ
+    required: false
+    default: Etc/UTC
+projectUrl: https://github.com/go-gitea/gitea
+about: |-
+  Gitea is a git host with the trimmings: repositories, pull requests, issues, a package registry, and Actions, in a single light binary. It is where the household's own code lives — and the household's own apps — Hub, Fin, Office, Feed, Hook — deploy from a Gitea just like it.
+
+  Fog configures it from the environment on every boot, so the clone URLs it prints follow the address you give it.
+highlights:
+  - Pull requests, code review, and protected branches
+  - Issues, milestones, labels, and a wiki per repository
+  - Actions compatible with GitHub workflows
+  - Package registry for containers, npm, and more
+  - Clone over HTTPS at this app's address, or SSH on port 2222
+screenshots:
+  - src: shot-1.webp
+    alt: A repository
+  - src: shot-2.webp
+    alt: A pull request
+  - src: shot-3.webp
+    alt: Issues
+  - src: shot-4.webp
+    alt: An Actions run
+logo: logo.svg
+developer: Gitea
+license: MIT
+website: https://about.gitea.com
+docs: https://docs.gitea.com
+footprint:
+  memory: 209715200
+  memoryPeak: 838860800
+  cpu: moderate
+  cpuWhen: running Actions
+  disk: 314572800
+  diskGrows: with your repositories

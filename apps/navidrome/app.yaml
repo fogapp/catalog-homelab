@@ -1,0 +1,62 @@
+id: navidrome
+title: Navidrome
+description: Music streaming server with Subsonic-compatible apps.
+category: Media servers
+icon: '🎧'
+spec:
+  source:
+    type: image
+    image: deluan/navidrome:latest
+  env:
+    TZ: Etc/UTC
+  volumes:
+    - name: data
+      mount: /data
+    - name: music
+      mount: /music
+      files: Content/Music
+  routes:
+    - port: 4533
+  health:
+    path: /ping
+  backup:
+    enabled: true
+options:
+  - key: tz
+    label: Timezone
+    target: env:TZ
+    required: false
+    default: Etc/UTC
+  - key: music
+    label: Music folder
+    hint: Navidrome streams what it finds here.
+    target: volume:music
+    required: false
+projectUrl: https://github.com/navidrome/navidrome
+about: |-
+  Navidrome streams your music collection. It scans the music folder, keeps up with additions, and plays through its own web player or any of the many apps that speak the Subsonic API — on the phone, in the car, on the desktop.
+
+  It is light enough to run on anything and fast with libraries of a hundred thousand tracks.
+highlights:
+  - Works with dozens of Subsonic-compatible apps
+  - Scans the folder in the background and picks up changes
+  - Playlists, smart playlists, favourites, and ratings per user
+  - Transcoding on the fly for slow links
+  - Last.fm and ListenBrainz scrobbling
+screenshots:
+  - src: shot-1.webp
+    alt: The web player on a desktop
+  - src: shot-2.webp
+    alt: The web player on a phone
+  - src: shot-3.webp
+    alt: An album on a phone
+logo: logo.svg
+developer: Navidrome project
+license: GPL-3.0
+website: https://www.navidrome.org
+docs: https://www.navidrome.org/docs/
+footprint:
+  memory: 104857600
+  memoryPeak: 419430400
+  cpu: light
+  disk: 157286400

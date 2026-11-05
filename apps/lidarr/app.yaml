@@ -1,0 +1,62 @@
+id: lidarr
+title: Lidarr
+description: Music collection management.
+category: Media automation
+icon: '🎵'
+spec:
+  source:
+    type: image
+    image: lscr.io/linuxserver/lidarr:latest
+  env:
+    PGID: "1000"
+    PUID: "1000"
+    TZ: Etc/UTC
+  volumes:
+    - name: config
+      mount: /config
+      owner: 1000:1000
+    - name: media
+      mount: /data
+      files: Content
+  routes:
+    - port: 8686
+  health:
+    path: /ping
+  backup:
+    enabled: true
+options:
+  - key: tz
+    label: Timezone
+    target: env:TZ
+    required: false
+    default: Etc/UTC
+  - key: media
+    label: Media folder
+    hint: Mounted at /data.
+    target: volume:media
+    required: false
+projectUrl: https://github.com/Lidarr/Lidarr
+about: |-
+  Lidarr manages a music collection the way Sonarr manages series. Follow artists and it watches for new releases, grabs them through your download client, and files them tagged and named for Navidrome.
+
+  It handles the whole discography: albums, EPs, singles, and the metadata that keeps a library tidy.
+highlights:
+  - Follow artists and monitor for new releases
+  - Quality and metadata profiles
+  - Tags and renames on import
+  - Usenet and torrent clients alike
+screenshots:
+  - src: shot-1.webp
+    alt: An artist's page in Lidarr
+  - src: shot-2.webp
+    alt: Adding a new artist
+logo: logo.svg
+developer: Lidarr team
+license: GPL-3.0
+website: https://lidarr.audio
+docs: https://wiki.servarr.com/lidarr
+footprint:
+  memory: 262144000
+  memoryPeak: 629145600
+  cpu: light
+  disk: 367001600

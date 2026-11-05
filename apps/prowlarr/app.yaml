@@ -1,0 +1,52 @@
+id: prowlarr
+title: Prowlarr
+description: Indexer manager that feeds Sonarr, Radarr, and Lidarr.
+category: Media automation
+icon: '🔍'
+spec:
+  source:
+    type: image
+    image: lscr.io/linuxserver/prowlarr:latest
+  env:
+    PGID: "1000"
+    PUID: "1000"
+    TZ: Etc/UTC
+  volumes:
+    - name: config
+      mount: /config
+      owner: 1000:1000
+  routes:
+    - port: 9696
+  health:
+    path: /ping
+  backup:
+    enabled: true
+options:
+  - key: tz
+    label: Timezone
+    target: env:TZ
+    required: false
+    default: Etc/UTC
+projectUrl: https://github.com/Prowlarr/Prowlarr
+about: |-
+  Prowlarr is the one place your indexers are configured. Add a usenet or torrent indexer once and it is shared with Sonarr, Radarr, Lidarr, and Hook automatically — no re-entering API keys in every app.
+
+  It also searches across every indexer at once, and keeps the history of what was asked and what came back.
+highlights:
+  - Hundreds of indexer definitions built in
+  - Syncs indexers to every arr app you connect
+  - Search all indexers from one screen
+  - Proxy and rate-limit support
+screenshots:
+  - src: shot-1.webp
+    alt: Searching every indexer at once
+logo: logo.svg
+developer: Prowlarr team
+license: GPL-3.0
+website: https://prowlarr.com
+docs: https://wiki.servarr.com/prowlarr
+footprint:
+  memory: 262144000
+  memoryPeak: 524288000
+  cpu: light
+  disk: 367001600

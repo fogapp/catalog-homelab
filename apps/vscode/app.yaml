@@ -1,0 +1,75 @@
+id: vscode
+title: VS Code
+description: VS Code in the browser — edit code, run a terminal, and install extensions from any machine.
+category: Development
+icon: '🧑‍💻'
+spec:
+  source:
+    type: image
+    image: lscr.io/linuxserver/code-server:latest
+  env:
+    DEFAULT_WORKSPACE: /config/workspace
+    PGID: "1000"
+    PUID: "1000"
+    TZ: Etc/UTC
+  secrets:
+    - PASSWORD
+    - SUDO_PASSWORD
+  volumes:
+    - name: config
+      mount: /config
+      owner: 1000:1000
+  routes:
+    - port: 8443
+  health:
+    path: /healthz
+  deployStrategy: restart
+  backup:
+    enabled: true
+  notes: Sign in with the password in Config → Secrets (PASSWORD). The terminal is a shell inside this app's container, so anyone with the password can run commands there — keep it strong, and don't share it beyond the people you'd give a login on this server. Extensions come from Open VSX, the open marketplace, rather than Microsoft's, so a few Microsoft-only ones (Copilot, Pylance, Remote-SSH) aren't available. Previews and extension pages need a secure context, so reach it over HTTPS at the hostname Fog serves it on. Your projects live in /config/workspace, and settings, extensions, and workspace are all included in backups. To use sudo in the terminal, set SUDO_PASSWORD in Config → Secrets and redeploy.
+options:
+  - key: PASSWORD
+    label: PASSWORD
+    hint: The editor's sign-in password; copy it from Config → Secrets after install.
+    target: secret:PASSWORD
+    required: true
+    generate: alnum32
+  - key: sudo_password
+    label: Sudo password
+    hint: Lets the terminal run sudo. Blank leaves sudo off.
+    target: secret:SUDO_PASSWORD
+    required: false
+    advanced: true
+  - key: tz
+    label: Timezone
+    target: env:TZ
+    required: false
+    default: Etc/UTC
+projectUrl: https://github.com/coder/code-server
+about: |-
+  VS Code, the editor, running on this server and used from a browser tab. Open it from a laptop, a tablet, or a borrowed machine and your files, settings, extensions, and terminal are exactly where you left them — the work happens here, not on whatever you're typing on.
+
+  It is code-server, the open-source build of VS Code that Coder packages for the web. Extensions install from Open VSX, so most of the usual ones are there; a few Microsoft-only ones are not.
+highlights:
+  - The full VS Code editor, with its settings, themes, and keybindings
+  - An integrated terminal on the server itself
+  - Extensions from the Open VSX marketplace
+  - 'Git built in: stage, commit, and push from the sidebar'
+  - Everything under one volume, so backups carry your whole setup
+screenshots:
+  - src: shot-1.webp
+    alt: Editing a file with the explorer open
+  - src: shot-2.webp
+    alt: The welcome page
+logo: logo.svg
+developer: Coder
+license: MIT
+website: https://coder.com/docs/code-server
+docs: https://coder.com/docs/code-server/guide
+footprint:
+  memory: 209715200
+  memoryPeak: 2097152000
+  cpu: moderate
+  cpuWhen: running language servers and builds
+  disk: 367001600
+  diskGrows: with your projects and extensions

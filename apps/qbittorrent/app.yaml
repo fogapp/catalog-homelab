@@ -1,0 +1,66 @@
+id: qbittorrent
+title: qBittorrent
+description: Torrent client with a web UI.
+category: Downloads
+icon: ⬇️
+spec:
+  source:
+    type: image
+    image: lscr.io/linuxserver/qbittorrent:latest
+  env:
+    PGID: "1000"
+    PUID: "1000"
+    TZ: Etc/UTC
+    WEBUI_PORT: "8080"
+  volumes:
+    - name: config
+      mount: /config
+      owner: 1000:1000
+    - name: media
+      mount: /data
+      files: Content
+  routes:
+    - port: 8080
+  backup:
+    enabled: true
+options:
+  - key: tz
+    label: Timezone
+    target: env:TZ
+    required: false
+    default: Etc/UTC
+  - key: media
+    label: Media folder
+    hint: Mounted at /data — same shared folder as the arr apps.
+    target: volume:media
+    required: false
+projectUrl: https://github.com/qbittorrent/qBittorrent
+about: |-
+  qBittorrent is a torrent client with a full web interface. The arr apps hand it what to fetch; it downloads to the shared media folder, seeds for as long as you ask, and reports back so imports happen without you.
+
+  It is the client most guides assume, and its web UI does everything the desktop one does.
+highlights:
+  - A complete web interface
+  - Categories and per-category folders for the arr apps
+  - Bandwidth scheduling and seeding limits
+  - RSS with automatic downloading
+  - Sequential download and search plugins
+screenshots:
+  - src: shot-1.webp
+    alt: The transfer list
+  - src: shot-2.webp
+    alt: A torrent's details and peers
+  - src: shot-3.webp
+    alt: Options
+logo: logo.svg
+developer: qBittorrent project
+license: GPL-2.0-or-later
+website: https://www.qbittorrent.org
+docs: https://github.com/qbittorrent/qBittorrent/wiki
+footprint:
+  memory: 209715200
+  memoryPeak: 838860800
+  cpu: moderate
+  cpuWhen: downloading and seeding
+  disk: 314572800
+  diskGrows: with what it downloads

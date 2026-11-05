@@ -1,0 +1,58 @@
+id: bazarr
+title: Bazarr
+description: Subtitle management for Sonarr and Radarr libraries.
+category: Media automation
+icon: '💬'
+spec:
+  source:
+    type: image
+    image: lscr.io/linuxserver/bazarr:latest
+  env:
+    PGID: "1000"
+    PUID: "1000"
+    TZ: Etc/UTC
+  volumes:
+    - name: config
+      mount: /config
+      owner: 1000:1000
+    - name: media
+      mount: /data
+      files: Content
+  routes:
+    - port: 6767
+  backup:
+    enabled: true
+options:
+  - key: tz
+    label: Timezone
+    target: env:TZ
+    required: false
+    default: Etc/UTC
+  - key: media
+    label: Media folder
+    hint: Mounted at /data.
+    target: volume:media
+    required: false
+projectUrl: https://github.com/morpheus65535/bazarr
+about: |-
+  Bazarr finds subtitles for the films and series Sonarr and Radarr manage. It watches the library, fetches subtitles in the languages you want from a dozen providers, and keeps upgrading them as better ones appear.
+
+  It fills the gap Jellyfin can't: subtitles that arrive on their own, in the right language, for everything.
+highlights:
+  - Language profiles per series or film
+  - A dozen subtitle providers
+  - Automatic upgrades to better-synced subtitles
+  - Follows Sonarr's and Radarr's libraries directly
+screenshots:
+  - src: shot-1.webp
+    alt: Bazarr's series view with subtitle status
+logo: logo.svg
+developer: morpheus65535
+license: GPL-3.0
+website: https://www.bazarr.media
+docs: https://wiki.bazarr.media
+footprint:
+  memory: 262144000
+  memoryPeak: 524288000
+  cpu: light
+  disk: 419430400

@@ -1,0 +1,52 @@
+id: adguard
+title: AdGuard Home
+description: Network-wide ad and tracker blocking — a DNS server for your whole LAN.
+category: Utilities
+icon: '🛡️'
+spec:
+  source:
+    type: image
+    image: adguard/adguardhome:latest
+  volumes:
+    - name: work
+      mount: /opt/adguardhome/work
+    - name: conf
+      mount: /opt/adguardhome/conf
+  routes:
+    - port: 3000
+  ports:
+    - port: 53
+      protocol: tcp
+    - port: 53
+      protocol: udp
+  health:
+    path: /
+  deployStrategy: restart
+  backup:
+    enabled: true
+  notes: 'In the setup wizard, set the Admin Web Interface port to **3000** (it defaults to 80) — that''s the port Fog''s route points at; the DNS listen interface and port 53 are fine as offered. Then point clients at this server: either set your router''s DHCP DNS to this server''s IP, or change DNS per device. If port 53 is already taken on the host (e.g. systemd-resolved''s stub listener or another DNS server), free it first or the app won''t start.'
+projectUrl: https://github.com/AdguardTeam/AdGuardHome
+about: |-
+  AdGuard Home blocks ads and trackers for every device on the network at once. It runs as your DNS server: point the router at it and phones, TVs, and laptops stop resolving ad domains without any software installed on them.
+
+  It also gives you a view of what the devices in the house are talking to, and lets you block or allow per client.
+highlights:
+  - Network-wide blocking with no client software
+  - Per-client rules and parental controls
+  - Encrypted upstream DNS (DoH, DoT, DoQ)
+  - Query log and statistics
+  - Publishes port 53 on this machine
+screenshots:
+  - src: shot-1.webp
+    alt: The AdGuard Home dashboard
+logo: logo.svg
+developer: AdGuard
+license: GPL-3.0
+website: https://adguard.com/adguard-home/overview.html
+docs: https://github.com/AdguardTeam/AdGuardHome/wiki
+footprint:
+  memory: 104857600
+  memoryPeak: 314572800
+  cpu: light
+  disk: 83886080
+  diskGrows: with the query log

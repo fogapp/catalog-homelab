@@ -1,0 +1,63 @@
+id: radarr
+title: Radarr
+description: Movie management — the Sonarr of movies.
+category: Media automation
+icon: '🎬'
+spec:
+  source:
+    type: image
+    image: lscr.io/linuxserver/radarr:latest
+  env:
+    PGID: "1000"
+    PUID: "1000"
+    TZ: Etc/UTC
+  volumes:
+    - name: config
+      mount: /config
+      owner: 1000:1000
+    - name: media
+      mount: /data
+      files: Content
+  routes:
+    - port: 7878
+  health:
+    path: /ping
+  backup:
+    enabled: true
+options:
+  - key: tz
+    label: Timezone
+    target: env:TZ
+    required: false
+    default: Etc/UTC
+  - key: media
+    label: Media folder
+    hint: Mounted at /data — use one shared folder across the stack so hardlinks work.
+    target: volume:media
+    required: false
+projectUrl: https://github.com/Radarr/Radarr
+about: |-
+  Radarr does for films what Sonarr does for series. Add a film — or a list of them — and it finds a copy that meets your quality profile, downloads it through your client, and files it under a clean name for Jellyfin.
+
+  Lists from TMDB, IMDb, Trakt, and Letterboxd keep the wanted queue full without you adding titles one by one.
+highlights:
+  - Discover and add from lists, or search by title
+  - Quality profiles with automatic upgrades
+  - Renaming and folder structure on import
+  - Usenet and torrent clients alike
+  - Custom formats for the releases you prefer
+screenshots:
+  - src: shot-1.webp
+    alt: Discovering films to add
+  - src: shot-2.webp
+    alt: A film's page with its releases
+logo: logo.svg
+developer: Radarr team
+license: GPL-3.0
+website: https://radarr.video
+docs: https://wiki.servarr.com/radarr
+footprint:
+  memory: 262144000
+  memoryPeak: 629145600
+  cpu: light
+  disk: 367001600

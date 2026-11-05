@@ -1,0 +1,45 @@
+id: uptime-kuma
+title: Uptime Kuma
+description: Uptime monitoring with status pages and alerts.
+category: Utilities
+icon: '🟢'
+spec:
+  source:
+    type: image
+    image: louislam/uptime-kuma:1
+  env:
+    TZ: Etc/UTC
+  volumes:
+    - name: data
+      mount: /app/data
+  routes:
+    - port: 3001
+  health:
+    path: /
+  backup:
+    enabled: true
+projectUrl: https://github.com/louislam/uptime-kuma
+about: |-
+  Uptime Kuma watches the things you care about and tells you when they go down. Give it a URL, a host, a port, or a container, and it checks on an interval, keeps the history, and notifies you the moment something changes.
+
+  It also publishes status pages — a tidy public view of what is up for the household or for people you host things for.
+highlights:
+  - HTTP, TCP, ping, DNS, Docker, and keyword monitors
+  - Ninety notification services, ntfy among them
+  - Status pages with incidents and maintenance windows
+  - Response-time charts and certificate expiry warnings
+screenshots:
+  - src: shot-1.webp
+    alt: The dashboard in dark mode
+  - src: shot-2.webp
+    alt: The dashboard in light mode
+logo: logo.svg
+developer: Louis Lam
+license: MIT
+website: https://uptime.kuma.pet
+docs: https://github.com/louislam/uptime-kuma/wiki
+footprint:
+  memory: 157286400
+  memoryPeak: 314572800
+  cpu: light
+  disk: 314572800

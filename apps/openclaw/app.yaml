@@ -1,0 +1,143 @@
+id: openclaw
+title: OpenClaw
+description: Personal AI assistant — chat with your agent over WhatsApp, Telegram, and the web, with memory and tools.
+category: Personal cloud
+icon: '🦞'
+spec:
+  source:
+    type: image
+    image: ghcr.io/openclaw/openclaw:extended-stable
+  env:
+    FOG_FQDN: '{{fqdn}}'
+    HOME: /home/node
+    OPENCLAW_DISABLE_BONJOUR: "1"
+    OPENCLAW_STATE_DIR: /home/node/.openclaw
+    TZ: Etc/UTC
+  secrets:
+    - OPENCLAW_GATEWAY_TOKEN
+    - ANTHROPIC_API_KEY
+    - FOG_LOCAL_LLM_API_KEY
+  volumes:
+    - name: state
+      mount: /home/node/.openclaw
+      owner: 1000:1000
+    - name: auth
+      mount: /home/node/.config/openclaw
+      owner: 1000:1000
+  routes:
+    - port: 18789
+      noBuffer: true
+  health:
+    path: /healthz
+  command:
+    - node
+    - dist/index.js
+    - gateway
+    - --bind
+    - lan
+    - --port
+    - "18789"
+  release:
+    - sh
+    - -c
+    - "set -e\nSTATE=\"${OPENCLAW_STATE_DIR:-$HOME/.openclaw}\"\nCLI=\"/app/dist/index.js\"\n\n# Locate the model server behind FOG_LOCAL_LLM_URL and choose a model on it.\n# Prints \"<kind>\t<baseUrl>\t<modelId>\"; explains itself and fails the deploy\n# when nothing usable answers, rather than installing a mute assistant.\ncat > /tmp/fog-probe.mjs <<'PROBE'\nconst raw = (process.env.FOG_LOCAL_LLM_URL || \"\").trim();\nconst want = (process.env.FOG_LOCAL_LLM_MODEL || \"\").trim();\nconst url = /^[a-z][a-z0-9+.-]*:\\/\\//i.test(raw) ? raw : \"http://\" + raw;\nlet u;\ntry { u = new URL(url) } catch { u = null }\nif (!u || (u.protocol !== \"http:\" && u.protocol !== \"https:\")) {\n  console.error(\"openclaw: \\\"\" + raw + \"\\\" is not a usable address — give an IP, host, or URL such as 192.0.2.10 or http://gpu-box.lan:11434\");\n  process.exit(1);\n}\nconst path = u.pathname.replace(/\\/+$/, \"\");\n// An explicit port or path means the operator knows where the server is; a\n// bare host gets the default ports of the servers people actually run.\nconst bases = path || u.port\n  ? [u.protocol + \"//\" + u.host + path]\n  : [11434, 1234, 8000, 8080].map((p) => u.protocol + \"//\" + u.hostname + \":\" + p);\n\nasync function json(target) {\n  const res = await fetch(target, { signal: AbortSignal.timeout(3000) });\n  if (!res.ok) throw new Error(\"HTTP \" + res.status);\n  return await res.json();\n}\n\n// Model servers also list embedders, rerankers, and speech models; none of\n// them can hold a conversation, so they never win the automatic pick.\nconst CHATTY = (id) => !/embed|rerank|whisper|clip|tts|stt|moderation|guard/i.test(id);\n\n// Ollama's native API. Tool support and context window come from /api/tags on\n// current Ollama; older daemons omit them and every model stays a candidate.\nasync function ollama(base) {\n  const body = await json(base + \"/api/tags\");\n  const models = Array.isArray(body?.models) ? body.models : [];\n  if (models.length === 0) throw new Error(\"no models\");\n  return models.map((m) => ({\n    id: m.name,\n    tools: Array.isArray(m.capabilities) ? m.capabilities.includes(\"tools\") : null,\n    ctx: Number(m?.details?.context_length) || 0,\n  }));\n}\n\n// LM Studio, vLLM, llama.cpp, LiteLLM — anything with an OpenAI-style /v1.\nasync function openai(base) {\n  const root = base.endsWith(\"/v1\") ? base : base + \"/v1\";\n  const body = await json(root + \"/models\");\n  const models = Array.isArray(body?.data) ? body.data : [];\n  if (models.length === 0) throw new Error(\"no models\");\n  return { root, list: models.map((m) => ({ id: String(m.id), tools: null, ctx: 0 })) };\n}\n\nfunction pick(models, kind) {\n  if (want) {\n    const hit = models.find((m) => m.id === want)\n      || models.find((m) => m.id === want + \":latest\")\n      || models.find((m) => m.id.replace(/:latest$/, \"\") === want);\n    if (!hit) {\n      console.error(\"openclaw: the server has no model named \\\"\" + want + \"\\\". It offers: \" + models.map((m) => m.id).join(\", \"));\n      process.exit(1);\n    }\n    return hit.id;\n  }\n  // Agents need tool calling; among models that have it, the roomiest context\n  // wins, and the name breaks ties so redeploys keep choosing the same model.\n  const chat = models.filter((m) => CHATTY(m.id));\n  const usable = chat.some((m) => m.tools) ? chat.filter((m) => m.tools) : chat;\n  const best = [...usable].sort((a, b) => b.ctx - a.ctx || a.id.localeCompare(b.id))[0];\n  if (!best) {\n    console.error(\"openclaw: \" + kind + \" answered but offers no chat model — pull or load one first.\");\n    process.exit(1);\n  }\n  const others = usable.filter((m) => m.id !== best.id).map((m) => m.id);\n  if (others.length > 0) console.error(\"openclaw: also available: \" + others.join(\", \"));\n  return best.id;\n}\n\nconst tried = [];\nfor (const base of bases) {\n  let why = \"no answer\";\n  if (!base.endsWith(\"/v1\")) {\n    try {\n      const models = await ollama(base);\n      console.log([\"ollama\", base, pick(models, \"Ollama\")].join(\"\\t\"));\n      process.exit(0);\n    } catch (err) { why = err.message }\n  }\n  try {\n    const { root, list } = await openai(base);\n    console.log([\"openai\", root, pick(list, \"The server\")].join(\"\\t\"));\n    process.exit(0);\n  } catch (err) { why = err.message }\n  tried.push(base + \" (\" + why + \")\");\n}\nconsole.error(\"openclaw: no LLM server answered at \" + raw + \". Tried \" + tried.join(\", \") + \".\");\nconsole.error(\"openclaw: check the address, that the server is running, and that it listens on the network rather than localhost only (Ollama needs OLLAMA_HOST=0.0.0.0).\");\nprocess.exit(1);\nPROBE\n\n# Answer the first-run \"who am I\" ritual from what the install pane collected.\n# Only ever runs while BOOTSTRAP.md is there: its presence is OpenClaw's own\n# marker for an agent that has not been introduced yet, and the agent deletes\n# it once it has. So a later deploy never overwrites an identity that the\n# operator and the agent have since made their own.\ncat > /tmp/fog-identity.js <<'IDENT'\nconst fs = require(\"node:fs\");\nconst path = require(\"node:path\");\nconst ws = process.argv[2];\nconst bootstrap = path.join(ws, \"BOOTSTRAP.md\");\nif (!fs.existsSync(bootstrap)) process.exit(0);\nconst val = (k) => (process.env[k] || \"\").trim();\nconst name = val(\"FOG_AGENT_NAME\");\nconst user = val(\"FOG_USER_NAME\");\nif (!name && !user) process.exit(0);\n\nif (name) {\n  const line = (label, v) => \"- **\" + label + \":** \" + v;\n  fs.writeFileSync(path.join(ws, \"IDENTITY.md\"), [\n    \"# IDENTITY.md - Who Am I?\",\n    \"\",\n    line(\"Name\", name),\n    line(\"Creature\", val(\"FOG_AGENT_CREATURE\") || \"AI assistant\"),\n    line(\"Vibe\", val(\"FOG_AGENT_VIBE\") || \"warm, direct, and a little playful\"),\n    line(\"Emoji\", val(\"FOG_AGENT_EMOJI\") || \"🦞\"),\n    \"\",\n    \"---\",\n    \"\",\n    \"Set up during install. A starting point, not a cage — rewrite it as you become yourself.\",\n    \"\",\n  ].join(\"\\n\"));\n  console.log(\"openclaw: seeded IDENTITY.md as \" + name);\n}\n\nif (user) {\n  const rows = [\"- **Name:** \" + user, \"- **What to call them:** \" + user];\n  const pronouns = val(\"FOG_USER_PRONOUNS\");\n  if (pronouns) rows.push(\"- **Pronouns:** \" + pronouns);\n  const tz = val(\"TZ\");\n  if (tz) rows.push(\"- **Timezone:** \" + tz);\n  fs.writeFileSync(path.join(ws, \"USER.md\"), [\n    \"# USER.md - About Your Human\",\n    \"\",\n    ...rows,\n    \"\",\n    \"## Context\",\n    \"\",\n    \"_(Learn what they care about as you go, and write it down here.)_\",\n    \"\",\n  ].join(\"\\n\"));\n  console.log(\"openclaw: seeded USER.md for \" + user);\n}\n\n// The naming conversation is the point of the ritual; keep it when the agent\n// still has no name of its own.\nif (name) {\n  fs.rmSync(bootstrap, { force: true });\n  console.log(\"openclaw: introductions are done — removed BOOTSTRAP.md\");\n}\nIDENT\n\nif [ ! -f \"$STATE/openclaw.json\" ]; then\n  echo \"openclaw: no config yet — running first-run setup\"\n  set -- --non-interactive --accept-risk --mode local --flow quickstart \\\n    --gateway-auth token --gateway-token-ref-env OPENCLAW_GATEWAY_TOKEN \\\n    --gateway-bind lan --gateway-port 18789 \\\n    --no-install-daemon --skip-daemon --skip-health --skip-channels \\\n    --skip-skills --skip-search --skip-hooks --skip-ui \\\n    --suppress-gateway-token-output\n  KIND=\"\"\n  if [ -n \"$FOG_LOCAL_LLM_URL\" ]; then\n    FOUND=$(node /tmp/fog-probe.mjs)\n    KIND=$(printf '%s' \"$FOUND\" | cut -f1)\n    BASE=$(printf '%s' \"$FOUND\" | cut -f2)\n    MODEL=$(printf '%s' \"$FOUND\" | cut -f3)\n    echo \"openclaw: answering with $MODEL on $BASE\"\n    if [ \"$KIND\" = \"ollama\" ]; then\n      set -- \"$@\" --auth-choice ollama --custom-base-url \"$BASE\" --custom-model-id \"$MODEL\"\n    else\n      set -- \"$@\" --auth-choice custom-api-key --custom-compatibility openai \\\n        --custom-provider-id local --custom-base-url \"$BASE\" --custom-model-id \"$MODEL\" \\\n        --custom-api-key \"${FOG_LOCAL_LLM_API_KEY:-local}\"\n    fi\n  elif [ -n \"$ANTHROPIC_API_KEY\" ]; then\n    # --secret-input-mode ref stores the credential as a reference to\n    # ANTHROPIC_API_KEY rather than a copy, so the vault stays the one place\n    # the key lives and backups carry no key.\n    set -- \"$@\" --auth-choice apiKey --anthropic-api-key \"$ANTHROPIC_API_KEY\" --secret-input-mode ref\n  else\n    # No brain chosen yet. The gateway and Control UI still come up, which\n    # beats a crash-looping app the operator can't get into to fix it.\n    echo \"openclaw: no model provider given — pick one in the Control UI\"\n    set -- \"$@\" --auth-choice skip\n  fi\n  node \"$CLI\" onboard \"$@\"\n  if [ \"$KIND\" = \"ollama\" ]; then\n    # A LAN Ollama needs no real credential; the marker keeps the provider\n    # self-contained instead of resolving an env var at runtime. Local models\n    # can be slow to wake, so a cold first turn gets room.\n    node \"$CLI\" config set models.providers.ollama.apiKey ollama-local >/dev/null\n    node \"$CLI\" config set models.providers.ollama.timeoutSeconds 300 --strict-json >/dev/null\n  fi\nfi\n\nnode /tmp/fog-identity.js \"$STATE/workspace\" || true\n\n[ -n \"$FOG_FQDN\" ] || exit 0\nORIGIN=\"https://$FOG_FQDN\"\ncur=$(node \"$CLI\" config get gateway.controlUi.allowedOrigins 2>/dev/null) || cur=\"\"\nnext=$(CUR=\"$cur\" ORIGIN=\"$ORIGIN\" node -e '\n  let cur = [];\n  try { cur = JSON.parse(process.env.CUR) } catch {}\n  if (!Array.isArray(cur)) cur = [];\n  if (cur.includes(process.env.ORIGIN)) { console.log(\"\"); }\n  else { console.log(JSON.stringify([...cur, process.env.ORIGIN])); }\n')\n[ -n \"$next\" ] || exit 0\necho \"openclaw: allowing Control UI origin $ORIGIN\"\nnode \"$CLI\" config set gateway.controlUi.allowedOrigins \"$next\" --strict-json\n"
+  deployStrategy: restart
+  backup:
+    enabled: true
+  notes: 'Installing runs OpenClaw''s setup for you, so the gateway comes up configured. Give it the address of a model server on your own network — Ollama, LM Studio, vLLM, or anything with an OpenAI-compatible API — and Fog finds it, picks a model that can use tools, and points the assistant at it; nothing leaves the house. An Anthropic key instead has it answer with Claude, and with neither it still boots so you can choose a provider in the Control UI. Name the assistant at install and it skips the first-run “who am I” interview; leave the name blank and it will ask you in your first conversation. First visit: the Control UI asks for the gateway token — copy it from Config → Secrets (OPENCLAW_GATEWAY_TOKEN). From there, pair chat channels (WhatsApp, Telegram, …) in the dashboard. The Control UI needs a secure context, so reach it over HTTPS — set up a domain certificate in Fog if you haven''t. Memory, sessions, and config live in the state volume and are included in backups.'
+  memoryLimit: 4g
+options:
+  - key: local_llm_url
+    label: Local LLM address
+    hint: IP, host, or URL of a model server on your network — Ollama, LM Studio, vLLM, or any OpenAI-compatible endpoint (e.g. 192.0.2.10). Fog discovers its models and picks one. It has to listen on the network, not just localhost (Ollama needs OLLAMA_HOST=0.0.0.0).
+    target: env:FOG_LOCAL_LLM_URL
+    required: false
+  - key: anthropic_api_key
+    label: Anthropic API key
+    hint: Used when no local address is given. Leave both blank to choose a provider later in the Control UI.
+    target: secret:ANTHROPIC_API_KEY
+    required: false
+  - key: agent_name
+    label: Assistant's name
+    hint: What you'll call it. Left blank, it interviews you about who it should be in your first conversation.
+    target: env:FOG_AGENT_NAME
+    required: false
+  - key: user_name
+    label: Your name
+    hint: What the assistant calls you.
+    target: env:FOG_USER_NAME
+    required: false
+  - key: local_llm_model
+    label: Local LLM model
+    hint: Model ID on that server, e.g. qwen3:8b. Blank picks the roomiest one that supports tool calling.
+    target: env:FOG_LOCAL_LLM_MODEL
+    required: false
+    advanced: true
+  - key: local_llm_api_key
+    label: Local LLM API key
+    hint: Only for local gateways that ask for one (LiteLLM and friends) — Ollama and LM Studio don't.
+    target: secret:FOG_LOCAL_LLM_API_KEY
+    required: false
+    advanced: true
+  - key: user_pronouns
+    label: Your pronouns
+    hint: So the assistant refers to you correctly.
+    target: env:FOG_USER_PRONOUNS
+    required: false
+    advanced: true
+  - key: agent_creature
+    label: Assistant's nature
+    hint: AI? robot? familiar? ghost in the machine?
+    target: env:FOG_AGENT_CREATURE
+    required: false
+    default: AI assistant
+  - key: agent_vibe
+    label: Assistant's vibe
+    hint: How it comes across — sharp, warm, chaotic, calm.
+    target: env:FOG_AGENT_VIBE
+    required: false
+    default: warm, direct, and a little playful
+  - key: agent_emoji
+    label: Assistant's emoji
+    hint: Its signature.
+    target: env:FOG_AGENT_EMOJI
+    required: false
+    default: '🦞'
+  - key: OPENCLAW_GATEWAY_TOKEN
+    label: OPENCLAW_GATEWAY_TOKEN
+    hint: Protects the gateway's Control UI and API; unique per instance.
+    target: secret:OPENCLAW_GATEWAY_TOKEN
+    required: true
+    generate: hex32
+  - key: tz
+    label: Timezone
+    target: env:TZ
+    required: false
+    default: Etc/UTC
+projectUrl: https://github.com/openclaw/openclaw
+about: |-
+  OpenClaw is a personal AI assistant that lives on your own hardware and meets you where you already talk — WhatsApp, Telegram, Discord, Slack, iMessage, and the web — with memory that persists between conversations and tools it can act with.
+
+  State, memory, and credentials stay on this machine. Models are plugins: point it at Claude, a local model, or whatever you prefer, and swap later without changing anything else.
+highlights:
+  - One assistant across twenty-plus chat channels and native apps
+  - Long-term memory and per-person context
+  - 'Tools and skills: calendars, home automation, browsing, code'
+  - Any model provider, including ones running locally
+  - No paid tier, hosted service, or token — stewarded by a foundation
+screenshots:
+  - src: shot-1.webp
+    alt: OpenClaw's mark
+  - src: shot-2.webp
+    alt: The agents view of the web interface
+logo: logo.svg
+developer: OpenClaw Foundation
+license: MIT
+website: https://openclaw.ai
+docs: https://docs.openclaw.ai
+footprint:
+  memory: 629145600
+  memoryPeak: 1572864000
+  cpu: moderate
+  cpuWhen: the assistant is thinking
+  disk: 2097152000

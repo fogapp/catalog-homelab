@@ -1,0 +1,46 @@
+id: homepage
+title: Homepage
+description: A tidy dashboard for everything running on this server.
+category: Utilities
+icon: '🗂️'
+spec:
+  source:
+    type: image
+    image: ghcr.io/gethomepage/homepage:latest
+  env:
+    HOMEPAGE_ALLOWED_HOSTS: '{{fqdn}}'
+    TZ: Etc/UTC
+  volumes:
+    - name: config
+      mount: /app/config
+  routes:
+    - port: 3000
+  backup:
+    enabled: true
+projectUrl: https://github.com/gethomepage/homepage
+about: |-
+  Homepage is a start page for everything running on this server: one tidy grid of the apps, with live status and a few numbers from each — downloads in progress, films requested, uptime — so a household can find its way around without bookmarks.
+
+  It is configured in YAML, and it reads directly from the apps it lists through their APIs.
+highlights:
+  - Widgets for a hundred-plus services, including everything in this store
+  - 'Docker integration: shows what is running'
+  - Bookmarks, search, and weather
+  - Themes and backgrounds
+screenshots:
+  - src: shot-1.webp
+    alt: A dashboard in dark mode
+  - src: shot-2.webp
+    alt: Homepage on a tablet
+  - src: shot-3.webp
+    alt: A themed dashboard
+logo: logo.webp
+developer: Homepage community
+license: GPL-3.0
+website: https://gethomepage.dev
+docs: https://gethomepage.dev/configs/
+footprint:
+  memory: 157286400
+  memoryPeak: 314572800
+  cpu: light
+  disk: 419430400

@@ -1,0 +1,64 @@
+id: audiobookshelf
+title: Audiobookshelf
+description: Audiobook and podcast server.
+category: Media servers
+icon: '📚'
+spec:
+  source:
+    type: image
+    image: ghcr.io/advplyr/audiobookshelf:latest
+  env:
+    TZ: Etc/UTC
+  volumes:
+    - name: config
+      mount: /config
+    - name: metadata
+      mount: /metadata
+    - name: library
+      mount: /library
+      files: Content/Audiobooks
+  routes:
+    - port: 80
+  health:
+    path: /healthcheck
+  backup:
+    enabled: true
+options:
+  - key: tz
+    label: Timezone
+    target: env:TZ
+    required: false
+    default: Etc/UTC
+  - key: library
+    label: Audiobook folder
+    hint: Point a library at /library in the app.
+    target: volume:library
+    required: false
+projectUrl: https://github.com/advplyr/audiobookshelf
+about: |-
+  Audiobookshelf is a server for audiobooks and podcasts. It organises the library, keeps everyone's listening position, and plays through its own apps on iPhone and Android or in the browser — with downloads for offline listening.
+
+  Podcasts are fetched and kept on schedule, and metadata and covers come from the usual sources.
+highlights:
+  - Progress synced across the web and the phone apps
+  - Podcast subscriptions with automatic downloads
+  - Chapters, bookmarks, and playback speed
+  - Metadata and covers from Audible, iTunes, and more
+  - Multi-user with per-user progress and libraries
+  - Ebook reading too
+screenshots:
+  - src: shot-1.webp
+    alt: The library
+  - src: shot-2.webp
+    alt: Streaming an audiobook
+logo: logo.svg
+developer: advplyr
+license: GPL-3.0
+website: https://www.audiobookshelf.org
+docs: https://www.audiobookshelf.org/docs
+footprint:
+  memory: 209715200
+  memoryPeak: 629145600
+  cpu: light
+  disk: 524288000
+  diskGrows: with podcasts it downloads

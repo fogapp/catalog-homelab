@@ -1,0 +1,83 @@
+id: n8n
+title: n8n
+description: Workflow automation — connect apps and services with visual flows, webhooks, schedules, and AI agents.
+category: Utilities
+icon: '🔀'
+spec:
+  source:
+    type: image
+    image: n8nio/n8n:latest
+  env:
+    DB_TYPE: postgresdb
+    GENERIC_TIMEZONE: Etc/UTC
+    N8N_DIAGNOSTICS_ENABLED: "false"
+    N8N_EDITOR_BASE_URL: https://{{fqdn}}/
+    N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
+    N8N_HOST: '{{fqdn}}'
+    N8N_PROTOCOL: https
+    N8N_PROXY_HOPS: "1"
+    WEBHOOK_URL: https://{{fqdn}}/
+  secrets:
+    - N8N_ENCRYPTION_KEY
+  volumes:
+    - name: data
+      mount: /home/node/.n8n
+      owner: 1000:1000
+  routes:
+    - port: 5678
+      noBuffer: true
+  health:
+    path: /healthz
+  deployStrategy: restart
+  needs:
+    postgres:
+      databases:
+        - n8n
+      inject:
+        DB_POSTGRESDB_DATABASE: dbname
+        DB_POSTGRESDB_HOST: host
+        DB_POSTGRESDB_PASSWORD: password
+        DB_POSTGRESDB_PORT: port
+        DB_POSTGRESDB_USER: user
+  backup:
+    enabled: true
+  notes: 'First visit: n8n asks you to create the owner account — do it right away, since whoever gets there first owns the instance. Webhook URLs use this app''s HTTPS address, so services outside the house can reach them only if Fog serves this app publicly. Reach the editor over HTTPS at the hostname Fog serves it on: n8n''s session cookie is secure-only, so plain http:// will not keep you signed in. Workflows, credentials, and execution history live in Fog''s Postgres and are in the app''s backups; N8N_ENCRYPTION_KEY in Config → Secrets encrypts the stored credentials, so never change it after setup.'
+options:
+  - key: tz
+    label: Timezone
+    hint: Schedule triggers fire in this zone.
+    target: env:GENERIC_TIMEZONE
+    required: false
+    default: Etc/UTC
+  - key: N8N_ENCRYPTION_KEY
+    label: N8N_ENCRYPTION_KEY
+    hint: Encrypts stored credentials; never change it after setup.
+    target: secret:N8N_ENCRYPTION_KEY
+    required: true
+    generate: alnum32
+projectUrl: https://github.com/n8n-io/n8n
+about: |-
+  n8n is a workflow automation tool: you draw a flow of nodes on a canvas — a trigger, then steps that fetch, transform, decide, and send — and it runs whenever the trigger fires. A webhook, a schedule, a new email, or a message in a chat can start one, and its 400-odd integrations reach most services a household uses.
+
+  When a node doesn't exist for what you need, a Code node takes JavaScript or Python, and an HTTP Request node talks to any API. AI agent nodes put a language model in the middle of a flow, with your other nodes as its tools.
+highlights:
+  - A visual editor for flows, with every run's data inspectable step by step
+  - Triggers from webhooks, schedules, email, and hundreds of services
+  - Code nodes in JavaScript or Python when a built-in node isn't enough
+  - AI agents that call your workflows and integrations as tools
+  - Credentials encrypted at rest in Fog's Postgres
+screenshots:
+  - src: shot-1.webp
+    alt: A workflow that drafts email replies with an AI model
+logo: logo.svg
+developer: n8n
+license: Sustainable Use License
+website: https://n8n.io
+docs: https://docs.n8n.io
+footprint:
+  memory: 419430400
+  memoryPeak: 1258291200
+  cpu: moderate
+  cpuWhen: running workflows
+  disk: 1153433600
+  diskGrows: with execution history

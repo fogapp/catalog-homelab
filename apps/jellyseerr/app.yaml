@@ -1,0 +1,50 @@
+id: jellyseerr
+title: Jellyseerr
+description: Request management for Jellyfin — family-friendly front door for the arr stack.
+category: Media automation
+icon: '🙋'
+spec:
+  source:
+    type: image
+    image: fallenbagel/jellyseerr:latest
+  env:
+    TZ: Etc/UTC
+  volumes:
+    - name: config
+      mount: /app/config
+  routes:
+    - port: 5055
+  health:
+    path: /api/v1/status
+  backup:
+    enabled: true
+options:
+  - key: tz
+    label: Timezone
+    target: env:TZ
+    required: false
+    default: Etc/UTC
+projectUrl: https://github.com/Fallenbagel/jellyseerr
+about: |-
+  Jellyseerr is the front door to a media stack for people who don't want to see the machinery. Anyone in the household signs in with their Jellyfin account, searches for a film or series, and presses Request; Sonarr and Radarr do the rest.
+
+  Requests can need approval, and everyone can see what is already in the library, what is on its way, and what is coming out soon.
+highlights:
+  - Sign in with a Jellyfin account
+  - Request films and series; approve or auto-approve per user
+  - Shows what is already available, pending, or downloading
+  - Discover trending, upcoming, and popular titles
+  - Notifications by email, Telegram, Discord, or ntfy
+screenshots:
+  - src: shot-1.webp
+    alt: 'The Jellyseerr home page: recently added and trending titles'
+logo: logo.svg
+developer: Seerr team
+license: MIT
+website: https://seerr.dev
+docs: https://docs.seerr.dev
+footprint:
+  memory: 262144000
+  memoryPeak: 524288000
+  cpu: light
+  disk: 419430400
