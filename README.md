@@ -29,3 +29,19 @@ apps/<id>/*.svg|webp  its logo and screenshots
 
 Each release of fog also embeds a copy of this catalog as committed
 (`scripts/catalog-seed.sh` in fog), which a fog reads until its first fetch.
+
+## License
+
+Copyright (c) 2026 Matthew Werner
+
+The catalog (`catalog.yaml`, each app's `app.yaml`, and this README) is under
+the MIT License; see [LICENSE](LICENSE). Copy it, adapt it, and publish
+catalogs of your own from it.
+
+The license doesn't cover the apps' logos, screenshots and names. They
+belong to their own projects and are here only to identify them; each app
+is under its own license, which its entry names (`license:`). The Fog name
+and logo are trademarks under [TRADEMARKS.md](TRADEMARKS.md).
+
+Issues are welcome; pull requests aren't accepted for now. See
+[CONTRIBUTING.md](CONTRIBUTING.md).
